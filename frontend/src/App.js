@@ -1,13 +1,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "./App.css";
+import { CLIENT_ID, REDIRECT_URI, AUTH_ENDPOINT, RESPONSE_TYPE, SCOPE, BACKEND_URL } from "./configure/Data";
 
-const CLIENT_ID = "192ead2715344c5dad29c0d2f13143af";
-const REDIRECT_URI = "http://localhost:3000";
-const AUTH_ENDPOINT = "https://accounts.spotify.com/authorize";
-const RESPONSE_TYPE = "token";
-const SCOPE = "user-read-recently-played";
-const BACKEND_URL = "http://localhost:8000/tracks/"; // FastAPI Backend URL
 
 function App() {
   const [token, setToken] = useState("");
@@ -43,17 +38,27 @@ function App() {
           },
         }
       );
-      setTracks(response.data.items);
-
-      // Send tracks to FastAPI backend
-      for (const item of response.data.items) {
+  
+      const januaryFirst = new Date(new Date().getFullYear(), 0, 1); // January 1st
+      const today = new Date();
+  
+      const filteredTracks = response.data.items.filter((item) => {
+        const playedAt = new Date(item.played_at);
+        return playedAt >= januaryFirst && playedAt <= today;
+      });
+  
+      setTracks(filteredTracks);
+  
+      // Send filtered tracks to FastAPI backend
+      for (const item of filteredTracks) {
         const trackData = {
           name: item.track.name,
           artist: item.track.artists.map((artist) => artist.name).join(", "),
           album: item.track.album.name,
           image_url: item.track.album.images[0]?.url || "",
+          played_at: item.played_at,
         };
-
+  
         await axios.post(BACKEND_URL, trackData)
           .then(() => console.log("Track saved:", trackData))
           .catch((error) => console.error("Error saving track:", error));
@@ -62,6 +67,7 @@ function App() {
       console.error("Error fetching recently played tracks:", error);
     }
   };
+  
 
   return (
     <div className="App">
@@ -98,6 +104,8 @@ function App() {
                   <p>
                     {track.track.name} - {track.track.artists.map((artist) => artist.name).join(", ")}
                   </p>
+
+                  <p>Played at: {track.played_at}</p>
                 </li>
               ))}
             </ul>

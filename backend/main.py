@@ -1,9 +1,10 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import create_engine, Column, Integer, String, inspect
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, inspect
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from fastapi.middleware.cors import CORSMiddleware
+from datetime import datetime
 
 # Database connection
 DATABASE_URL = "postgresql://postgres:1234@localhost/spotify_db"
@@ -20,6 +21,7 @@ class Track(Base):
     artist = Column(String, nullable=False)
     album = Column(String, nullable=False)
     image_url = Column(String)
+    played_at = Column(DateTime, nullable=False)  # Nueva columna
 
 # Function to create the table if it doesn't exist
 def create_tables():
@@ -47,6 +49,7 @@ class TrackCreate(BaseModel):
     artist: str
     album: str
     image_url: str
+    played_at: datetime  # Nuevo campo
 
 @app.post("/tracks/")
 def save_track(track: TrackCreate):
@@ -56,7 +59,8 @@ def save_track(track: TrackCreate):
         name=track.name,
         artist=track.artist,
         album=track.album,
-        image_url=track.image_url
+        image_url=track.image_url,
+        played_at=track.played_at
     )
     db.add(db_track)
     db.commit()
